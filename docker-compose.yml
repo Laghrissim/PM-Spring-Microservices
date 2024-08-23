@@ -1,0 +1,30 @@
+services:
+  appsegov-config-service:
+    build: ./config-service
+    container_name: appsegov-config-service
+    ports:
+      - '8888:8888'
+    expose:
+      - '8888'
+    healthcheck:
+      test: [ "CMD","curl","-f","http://localhost:8888/actuator/health" ]
+      interval: 10s
+
+  appsegov-registry-service:
+    build: ./registry-service
+    container_name: appsegov-registry-service
+    environment:
+      CONFIGSERVER_URI: "http://appsegov-config-service:8888"
+      CONFIGSERVER_PORT: "8888"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://appsegov-registry-service:8761/eureka/"
+      EUREKASERVER_PORT: "8761"
+    ports:
+      - '8761:8761'
+    expose:
+      - '8761'
+    healthcheck:
+      test: ["CMD","curl","-f","http://appsegov-registry-service:8761/actuator/health"]
+      interval: 20s
+    depends_on:
+      appsegov-config-service:
+        condition: service_healthy

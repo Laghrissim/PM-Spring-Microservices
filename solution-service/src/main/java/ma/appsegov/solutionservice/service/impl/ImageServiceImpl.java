@@ -1,0 +1,75 @@
+package ma.appsegov.solutionservice.service.impl;
+
+import ma.appsegov.solutionservice.service.ImageService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+
+@Service
+public class ImageServiceImpl implements ImageService {
+
+
+    private final Path root = Paths.get(new File("solution-service/src/main/resources/ProfileImages").getAbsolutePath());
+
+    public String saveImage(MultipartFile file) throws IOException {
+        if (!Files.exists(root)) {
+            Files.createDirectory(root);
+        }
+
+        String uniqueFileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        Path path = root.resolve(uniqueFileName);
+        Files.copy(file.getInputStream(), path);
+
+        // Construct and return the URL
+        String fileUrl = "http://localhost:8081/solution-service/api/solutions" + "/getImage/" + uniqueFileName;
+        return fileUrl;
+    }
+
+    public Resource getProfile(String filename) throws MalformedURLException {
+        Path imagePath = root.resolve(filename).normalize();
+        Resource resource = new UrlResource(imagePath.toUri());
+
+        if (!resource.exists() || !resource.isReadable()) {
+            throw new RuntimeException("Failed to read the file");
+        }
+
+        return resource;
+    }
+
+    public String getContentType(String fileName) throws IOException {
+        Path filePath = root.resolve(fileName).normalize();
+
+        // Check if the file exists and is readable
+        if (!Files.exists(filePath) || !Files.isReadable(filePath)) {
+            throw new RuntimeException("File cannot be read or does not exist");
+        }
+
+        return Files.probeContentType(filePath);
+    }
+
+    public void deleteProfile(String filename) throws IOException {
+        String[] parts = filename.split("/");
+        String fileName = parts[parts.length - 1]; // Get the last part assuming it's the file name
+
+        Path imagePath = root.resolve(fileName).normalize();
+        Resource resource = new UrlResource(imagePath.toUri());
+
+        if (resource.exists() && resource.isReadable()) {
+            Files.delete(imagePath);
+        } else {
+
+            //    throw new RuntimeException("File cannot be deleted or does not exist");
+        }
+    }
+
+}
